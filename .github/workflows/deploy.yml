@@ -60,6 +60,13 @@ jobs:
           composer install --no-dev --optimize-autoloader
 
           ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/storage storage
+
+          # ❗ PRE ARTISAN KOMANDI PRAVIMO SYMLINK
+          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE /var/www/cronosdev/data/www/mw.cronosdev.com/current
+
+          # Sada ulazimo u current (koji vidi .env)
+          cd /var/www/cronosdev/data/www/mw.cronosdev.com/current
+
           
           php artisan config:cache
           php artisan route:cache
