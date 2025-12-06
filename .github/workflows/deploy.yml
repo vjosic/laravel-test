@@ -1,0 +1,74 @@
+name: Deploy Laravel App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, bcmath, intl
+        tools: composer:v2
+
+    - name: Install PHP dependencies
+      run: composer install --no-dev --optimize-autoloader
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install NPM dependencies and build assets
+      run: |
+        npm ci
+        npm run build
+
+    - name: Upload files to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_KEY }}
+        source: "./"
+        target: "/var/www/app/deployment"
+
+    - name: Run SSH commands on server to deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_KEY }}
+        script: |
+          set -e
+          
+          cd /var/www/app/releases
+          RELEASE=$(date +'%Y%m%d%H%M%S')
+          mkdir $RELEASE
+          
+          cp -R /var/www/app/deployment/* $RELEASE
+
+          cd $RELEASE
+          composer install --no-dev --optimize-autoloader
+
+          ln -sfn /var/www/app/storage storage
+          
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+          php artisan migrate --force
+
+          ln -sfn /var/www/app/releases/$RELEASE /var/www/app/current
+
+          sudo systemctl reload php8.3-fpm
+
