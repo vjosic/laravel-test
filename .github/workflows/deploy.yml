@@ -67,7 +67,7 @@ jobs:
           # Sada ulazimo u current (koji vidi .env)
           cd /var/www/cronosdev/data/www/mw.cronosdev.com/current
 
-          
+          php artisan config:clear
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
