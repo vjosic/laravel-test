@@ -64,8 +64,7 @@ jobs:
           # ❗ PRE ARTISAN KOMANDI PRAVIMO SYMLINK
           ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE /var/www/cronosdev/data/www/mw.cronosdev.com/current
 
-          # Sada ulazimo u current (koji vidi .env)
-          cd /var/www/cronosdev/data/www/mw.cronosdev.com/current
+          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/shared/.env /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE/.env
 
           php artisan config:clear
           php artisan config:cache
