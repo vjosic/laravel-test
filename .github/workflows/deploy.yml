@@ -50,30 +50,49 @@ jobs:
         key: ${{ secrets.SERVER_KEY }}
         script: |
           set -e
-          
-          cd /var/www/cronosdev/data/www/mw.cronosdev.com/releases
+
+          PROJECT=/var/www/cronosdev/data/www/mw.cronosdev.com
+          RELEASES=$PROJECT/releases
+          SHARED=$PROJECT/shared
           RELEASE=$(date +'%Y%m%d%H%M%S')
-          mkdir $RELEASE
-          
-          cp -R /var/www/cronosdev/data/www/mw.cronosdev.com/deployment/* $RELEASE
-          cd $RELEASE
+          NEW_RELEASE=$RELEASES/$RELEASE
+
+          echo "🔧 Creating release $RELEASE"
+          mkdir $NEW_RELEASE
+
+          echo "📦 Copying deployment files"
+          cp -R $PROJECT/deployment/* $NEW_RELEASE
+
+          cd $NEW_RELEASE
+
+          echo "📚 Installing Composer dependencies"
           composer install --no-dev --optimize-autoloader
 
-          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/storage storage
+          echo "🔗 Linking storage"
+          ln -sfn $PROJECT/storage storage
 
-          # ❗ PRE ARTISAN KOMANDI PRAVIMO SYMLINK
-          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE /var/www/cronosdev/data/www/mw.cronosdev.com/current
+          echo "🔗 Linking .env"
+          ln -sfn $SHARED/.env .env
 
-          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/shared/.env /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE/.env
-
+          echo "🚀 Building Laravel caches"
           php artisan config:clear
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
 
+          echo "🗄️ Running migrations"
           php artisan migrate --force
 
-          ln -sfn /var/www/cronosdev/data/www/mw.cronosdev.com/releases/$RELEASE /var/www/cronosdev/data/www/mw.cronosdev.com/current
+          echo "🔁 Activating new release"
+          ln -sfn $NEW_RELEASE $PROJECT/current
 
+          echo "♻ Reloading PHP-FPM"
           sudo systemctl reload php8.3-fpm
+
+          echo "🧹 Cleaning old releases (keeping last 5)"
+          cd $RELEASES
+          ls -t | tail -n +6 | xargs rm -rf
+
+          echo "🎉 Deployment completed successfully"
+
 
